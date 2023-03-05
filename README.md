@@ -1,5 +1,5 @@
 # CTimers
-Custom timer addon for Windoer
+Custom timer addon for Windower
 
 Commands:
 
