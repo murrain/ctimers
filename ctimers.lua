@@ -3,7 +3,6 @@ _addon.author   = 'ainais'
 _addon.version  = '0.0.1'
 _addon.commands = {'ctimers', 'ct'}
 
-chars = require('chat.chars')
 require('logger')
 require('tables')
 require('sets')
@@ -11,64 +10,18 @@ require('lists')
 
 config = require('config')
 
-do
-    local now  = os.time()
-    local h, m = math.modf(os.difftime(now, os.time(os.date('!*t', now))) / 3600)
-
-    tz = '%+.4d':format(100 * h + 60 * m)
-    tz_sep = '%+.2d:%.2d':format(h, 60 * m)
-end
-
-constants = {
-    ['year']         = '%Y',
-    ['y']            = '%Y',
-    ['year_short']   = '%y',
-    ['month']        = '%m',
-    ['m']            = '%m',
-    ['month_short']  = '%b',
-    ['month_long']   = '%B',
-    ['day']          = '%d',
-    ['d']            = '%d',
-    ['day_short']    = '%a',
-    ['day_long']     = '%A',
-    ['hour']         = '%H',
-    ['h']            = '%H',
-    ['hour24']       = '%H',
-    ['hour12']       = '%I',
-    ['minute']       = '%M',
-    ['min']          = '%M',
-    ['second']       = '%S',
-    ['s']            = '%S',
-    ['sec']          = '%S',
-    ['ampm']         = '%p',
-    ['timezone']     = tz,
-    ['tz']           = tz,
-    ['timezone_sep'] = tz_sep,
-    ['tz_sep']       = tz_sep,
-    ['time']         = '%H:%M:%S',
-    ['date']         = '%Y-%m-%d',
-    ['datetime']     = '%Y:%m:%d %H:%M:%S',
-    ['iso8601']      = '%Y-%m-%dT%H:%M:%S' .. tz_sep,
-    ['rfc2822']      = '%a, %d %b %Y %H:%M:%S ' .. tz,
-    ['rfc822']       = '%a, %d %b %y %H:%M:%S ' .. tz,
-    ['rfc1036']      = '%a, %d %b %y %H:%M:%S ' .. tz,
-    ['rfc1123']      = '%a, %d %b %Y %H:%M:%S ' .. tz,
-    ['rfc3339']      = '%Y-%m-%dT%H:%M:%S' .. tz_sep,
-}
-
-lead_bytes = S{0x1E, 0x1F, 0xF7, 0xEF, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x7F}
-newline_pattern = '[' .. string.char(0x07, 0x0A) .. ']'
-
-local timers = T{}
-
 local last_update = 0
 
 defaults = {}
-defaults.color  = 201
-defaults.format = '[${time}]'
+defaults.position = {x=50,y=300}
+defaults.font = {family = "Arial",size=14,color={}}
+defaults.font.color = {alpha=255,red=200,green=200,blue=200} 
+defaults.bg =  {alpha=128,red=30,green=30,blue=30}
+defaults.timers = {}
 defaults.tickrate = 1
 
 settings = config.load(defaults)
+local timers = settings.timers
 
 function make_timestamp(format)
     return os.date((format:gsub('%${([%l%d_]+)}', constants)))
@@ -135,6 +88,7 @@ windower.register_event('addon command', function(cmd, ...)
         end
 
     elseif cmd == 'save' then
+	settings.timers = timers
         settings:save('all')
     else
 	--//ctimers add NAME H M S
