@@ -9,6 +9,9 @@ require('sets')
 require('lists')
 
 config = require('config')
+texts = require('texts')
+
+require('timers')
 
 --regex to match a valid date
 local time_pattern = "^%s*(%d%d?):([0-5]%d):([0-5]%d)%s*$"
@@ -122,20 +125,27 @@ windower.register_event('addon command', function(cmd, ...)
 	    	timers[name] = nil
 		log('Deleted timer '..name)
 		settings.timers = timers
-                settings:save('all')
+        settings:save('all')
 	    else
-		error('no timer named '..name)
+			error('no timer named '..name)
 	    end
-        end
+    end
 
     elseif cmd == 'save' then
 	settings.timers = timers
         settings:save('all')
     elseif cmd == 'list' then
 	    for name,time in pairs(timers) do
-		local current_time = os.time()
-		local remaining_time = time - current_time
-		log(name .. ' in ' .. remaining_time .. ' seconds')
+			local current_time = os.time()
+			local remaining_time = time - current_time
+			local hours = math.floor(remaining_time / 3600)
+			local minutes = math.floor((remaining_time % 3600) / 60)
+			local seconds = remaining_time % 60
+			local time_string = string.format("%s%s%s",
+									hours > 0 and string.format("%dhr ", hours) or "",
+									minutes > 0 and string.format("%dmin ", minutes) or "",
+									string.format("%dsec", seconds))
+			log(name .. ' in ' .. time_string )
 	    end
     else
 	--//ctimers add NAME H M S

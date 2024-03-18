@@ -1,1 +1,4 @@
-/data
+#ignored folders:
+/data/
+/export/
+#ignored files:
