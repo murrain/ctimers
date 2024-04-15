@@ -24,6 +24,7 @@ defaults.font.color = {alpha=255,red=200,green=200,blue=200}
 defaults.bg =  {alpha=128,red=30,green=30,blue=30}
 defaults.timers = {}
 defaults.tickrate = 1 --time in seconds
+defaults.sound = "long_pop.wav"
 
 settings = config.load(defaults)
 
@@ -66,6 +67,7 @@ windower.register_event('postrender', function(new,old)
 
 	for name,timer in pairs(timers) do
 		if ( timer <= current_time ) then
+			windower.play_sound(windower.addon_path..'sounds/' .. settings.sound)
 			log(name .. " alarm")
 			timers[name] = nil
 			settings.timers = timers
