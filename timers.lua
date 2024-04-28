@@ -8,11 +8,10 @@ timers = {
 
 function timers.new(timer_settings)
     o = {}
-    o.font = timer_settings.font
-    o.font_size = timer_settings.font_size
-    o.display_text = timer_settings.display_text
+    o.font = timer_settings.font.family
+    o.font_size = timer_settings.font.size
     timers.initialize(o)
-    timers.move(o, timer_settings.pos.x, timer_settings.pos.y)
+    timers.move(o, timer_settings.position.x, timer_settings.position.y)
     return o
 end
 
