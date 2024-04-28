@@ -12,19 +12,24 @@ config = require('config')
 texts = require('texts')
 
 require('timers')
+--[[
+timer: {name,time,text_object}
+--]]
 
 -- regex to match a valid date
 local time_pattern = "^%s*(%d%d?):([0-5]%d):([0-5]%d)%s*$"
 local last_update = 0
 
 defaults = {}
-defaults.position = {x = 50, y = 300}
-defaults.font = {family = "Arial", size = 14, color = {}}
-defaults.font.color = {alpha = 255, red = 200, green = 200, blue = 200}
-defaults.bg = {alpha = 128, red = 30, green = 30, blue = 30}
 defaults.timers = {}
 defaults.tickrate = 1 -- time in seconds
 defaults.sound = "long_pop.wav"
+defaults.visible = 1
+defaults.text = {}
+defaults.text.position = {x = 50, y = 300}
+defaults.text.font = {family = "Arial", size = 14, color = {}}
+defaults.text.font.color = {alpha = 255, red = 200, green = 200, blue = 200}
+defaults.text.bg = {alpha = 128, red = 30, green = 30, blue = 30}
 
 settings = config.load(defaults)
 
@@ -61,12 +66,12 @@ windower.register_event('postrender', function(new, old)
     if (current_time - last_update < settings.tickrate) then return end
     last_update = current_time
 
-    for name, timer in pairs(timers) do
-        if (timer <= current_time) then
+    for i, timer in pairs(timers) do
+        if (timer.time <= current_time) then
             windower.play_sound(windower.addon_path .. 'sounds/' ..
                                     settings.sound)
-            log(name .. " alarm")
-            timers[name] = nil
+            log(timer.name .. " alarm")
+            timers[i] = nil
             settings.timers = timers
             settings:save('all')
         end
@@ -83,14 +88,15 @@ windower.register_event('addon command', function(cmd, ...)
         elseif (string.match(args[2], time_pattern)) then
             local name = args[1]
             local new_time = get_next_timestamp(args[2])
-            if (timers[name]) then
-                error('Timer with name "' .. name .. '" already exists')
-            else
-                timers[name] = new_time
-                log('Added timer ' .. name)
-                settings.timers = timers
-                settings:save('all')
-            end
+			if(not args[3]) then args[3] = 1 end
+			timers_count = tonumber(args[3])
+			for i=1,timers_count do
+				new_time = new_time + (60 * i)
+				table.insert(timers,{name=name,time=new_time})
+				log('Added timer ' .. name)
+			end
+			settings.timers = timers
+			settings:save('all')
         elseif #args < 4 then
             error('Please specify name hours minutes seconds')
         else
@@ -101,14 +107,10 @@ windower.register_event('addon command', function(cmd, ...)
             local seconds = args[4]
             local total_seconds = hours * 3600 + minutes * 60 + seconds
             local new_time = current_time + total_seconds
-            if (timers[name]) then
-                error('Timer with name "' .. name .. '" already exists')
-            else
-                timers[name] = new_time
-                log('Added timer ' .. name)
-                settings.timers = timers
-                settings:save('all')
-            end
+			table.insert(timers,{name=name,time=new_time})
+			log('Added timer ' .. name)
+			settings.timers = timers
+			settings:save('all')
         end
 
     elseif cmd == 'del' then
@@ -120,23 +122,19 @@ windower.register_event('addon command', function(cmd, ...)
         else
             -- delete a timer
             name = args[1]
-            if (timers[name]) then
-                timers[name] = nil
-                log('Deleted timer ' .. name)
-                settings.timers = timers
-                settings:save('all')
-            else
-                error('no timer named ' .. name)
-            end
+			for i,timer in pairs(timers) do
+				if timers.name == name then timers[i] = nil end
+				log('Deleted timer ' .. name)
+			end
         end
 
     elseif cmd == 'save' then
         settings.timers = timers
         settings:save('all')
     elseif cmd == 'list' then
-        for name, time in pairs(timers) do
+        for i, timer in pairs(timers) do
             local current_time = os.time()
-            local remaining_time = time - current_time
+            local remaining_time = timer.time - current_time
             local hours = math.floor(remaining_time / 3600)
             local minutes = math.floor((remaining_time % 3600) / 60)
             local seconds = remaining_time % 60
@@ -146,7 +144,7 @@ windower.register_event('addon command', function(cmd, ...)
                                                   string.format("%dmin ",
                                                                 minutes) or "",
                                               string.format("%dsec", seconds))
-            log(name .. ' in ' .. time_string)
+            log(timer.name .. ' in ' .. time_string)
         end
     else
         -- //ctimers add NAME H M S
