@@ -33,7 +33,7 @@ defaults.text.bg = {alpha = 128, red = 30, green = 30, blue = 30}
 
 settings = config.load(defaults)
 
-local timers = settings.timers
+local timer_table = settings.timers or {}
 
 function make_timestamp(format)
     return os.date((format:gsub('%${([%l%d_]+)}', constants)))
@@ -57,8 +57,40 @@ function get_next_timestamp(timeString)
     return timestamp
 end
 
--- will neeed to switch to pre-render for ui elements
-windower.register_event('postrender', function(new, old)
+function create_timer(name,time)
+	local o = timers.new(settings.text)
+	table.insert(timer_table,{name=name,time=time,text_object=o})
+	log('Added timer ' .. name)
+	settings.timers = timer_table
+	settings:save('all')
+end
+
+function load_timers()
+	for i,timer in pairs(timer_table) do
+		timer.text_object = timers.new(settings.text)
+	end
+end
+
+load_timers()
+
+function list_timers()
+	for i, timer in pairs(timer_table) do
+		local current_time = os.time()
+		local remaining_time = timer.time - current_time
+		local hours = math.floor(remaining_time / 3600)
+		local minutes = math.floor((remaining_time % 3600) / 60)
+		local seconds = remaining_time % 60
+		local time_string = string.format("%s%s%s", hours > 0 and
+											  string.format("%dhr ", hours) or
+											  "", minutes > 0 and
+											  string.format("%dmin ",
+															minutes) or "",
+										  string.format("%dsec", seconds))
+		log(timer.name .. ' in ' .. time_string)
+	end
+end
+
+windower.register_event('prerender', function(new, old)
     local current_time = os.time()
 
     -- only check if timers have gone off if enough time as elapsed
@@ -66,14 +98,17 @@ windower.register_event('postrender', function(new, old)
     if (current_time - last_update < settings.tickrate) then return end
     last_update = current_time
 
-    for i, timer in pairs(timers) do
+    for i, timer in pairs(timer_table) do
         if (timer.time <= current_time) then
             windower.play_sound(windower.addon_path .. 'sounds/' ..
                                     settings.sound)
             log(timer.name .. " alarm")
-            timers[i] = nil
-            settings.timers = timers
+			table.remove(timer_table,i)
+			timers.destroy(timer.text_object)
+            settings.timers = timer_table
             settings:save('all')
+		else
+			timers.update_timer(timer.text_object,timer.name,timer.time)
         end
     end
 end)
@@ -89,14 +124,11 @@ windower.register_event('addon command', function(cmd, ...)
             local name = args[1]
             local new_time = get_next_timestamp(args[2])
 			if(not args[3]) then args[3] = 1 end
-			timers_count = tonumber(args[3])
+			local timers_count = tonumber(args[3])
 			for i=1,timers_count do
 				new_time = new_time + (60 * i)
-				table.insert(timers,{name=name,time=new_time})
-				log('Added timer ' .. name)
+				create_timer(name,new_time)
 			end
-			settings.timers = timers
-			settings:save('all')
         elseif #args < 4 then
             error('Please specify name hours minutes seconds')
         else
@@ -107,10 +139,7 @@ windower.register_event('addon command', function(cmd, ...)
             local seconds = args[4]
             local total_seconds = hours * 3600 + minutes * 60 + seconds
             local new_time = current_time + total_seconds
-			table.insert(timers,{name=name,time=new_time})
-			log('Added timer ' .. name)
-			settings.timers = timers
-			settings:save('all')
+			create_timer(name,new_time)
         end
 
     elseif cmd == 'del' then
@@ -122,30 +151,17 @@ windower.register_event('addon command', function(cmd, ...)
         else
             -- delete a timer
             name = args[1]
-			for i,timer in pairs(timers) do
-				if timers.name == name then timers[i] = nil end
+			for i,timer in pairs(timer_table) do
+				if timers.name == name then table.remove(timer_table,i) end
 				log('Deleted timer ' .. name)
 			end
         end
 
     elseif cmd == 'save' then
-        settings.timers = timers
+        settings.timers = timer_table
         settings:save('all')
     elseif cmd == 'list' then
-        for i, timer in pairs(timers) do
-            local current_time = os.time()
-            local remaining_time = timer.time - current_time
-            local hours = math.floor(remaining_time / 3600)
-            local minutes = math.floor((remaining_time % 3600) / 60)
-            local seconds = remaining_time % 60
-            local time_string = string.format("%s%s%s", hours > 0 and
-                                                  string.format("%dhr ", hours) or
-                                                  "", minutes > 0 and
-                                                  string.format("%dmin ",
-                                                                minutes) or "",
-                                              string.format("%dsec", seconds))
-            log(timer.name .. ' in ' .. time_string)
-        end
+        list_timers()
     else
         -- //ctimers add NAME H M S
         -- //ctimers del NAME
