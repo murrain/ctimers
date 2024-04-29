@@ -27,13 +27,13 @@ defaults.sound = "long_pop.wav"
 defaults.visible = 1
 defaults.text = {}
 defaults.text.position = {x = 50, y = 300}
-defaults.text.font = {family = "Arial", size = 14, color = {}}
+defaults.text.font = {family = "Arial", size = 11, color = {}}
 defaults.text.font.color = {alpha = 255, red = 200, green = 200, blue = 200}
 defaults.text.bg = {alpha = 128, red = 30, green = 30, blue = 30}
 
 settings = config.load(defaults)
 
-local timer_table = settings.timers or {}
+local timer_table = {}
 
 function make_timestamp(format)
     return os.date((format:gsub('%${([%l%d_]+)}', constants)))
@@ -58,24 +58,42 @@ function get_next_timestamp(timeString)
 end
 
 function create_timer(name, time)
-    local o = timers.new(settings.text)
-    local y_offset = table.insert(timer_table,
-                                  {name = name, time = time, text_object = o})
+    local o = timers.new(defaults.text)
+    local y_offset = (defaults.text.font.size + 2) * #timer_table
+	timers.move(o,defaults.text.position.x,defaults.text.position.y + y_offset)
+	table.insert(timer_table,{name = name, time = time, text_object = o})
     log('Added timer ' .. name)
-    settings.timers = timer_table
-    settings:save('all')
+	save_timers();
 end
 
 function load_timers()
-    for i, timer in pairs(timer_table) do
-        timer.text_object = timers.new(settings.text)
+	if not settings.timers then return end
+    for _, timer in pairs(settings.timers) do
+		local o = timers.new(defaults.text)
+		local y_offset = (defaults.text.font.size + 2) * #timer_table
+		timers.move(o,defaults.text.position.x,defaults.text.position.y + y_offset)
+		table.insert(timer_table,{name = timer.name, time = timer.time, text_object = o})
     end
+end
+
+function save_timers()
+	local settings_timers = {}
+	for _, timer in pairs(timer_table) do
+		table.insert(settings_timers,{name=timer.name,time=timer.time})
+	end
+	settings.timers = settings_timers
+    settings:save('all')
+end
+
+function toggle_timers()
+	settings.visible = not settings.visible
 end
 
 load_timers()
 
 function list_timers()
-    for i, timer in pairs(timer_table) do
+	if not timer_table then return end
+    for _, timer in pairs(timer_table) do
         local current_time = os.time()
         local remaining_time = timer.time - current_time
         local hours = math.floor(remaining_time / 3600)
@@ -92,6 +110,7 @@ function list_timers()
 end
 
 windower.register_event('prerender', function(new, old)
+	if not timer_table then return end
     local current_time = os.time()
 
     -- only check if timers have gone off if enough time as elapsed
@@ -104,12 +123,11 @@ windower.register_event('prerender', function(new, old)
             windower.play_sound(windower.addon_path .. 'sounds/' ..
                                     settings.sound)
             log(timer.name .. " alarm")
+			timers.destroy(timer.text_object)
             table.remove(timer_table, i)
-            timers.destroy(timer.text_object)
-            settings.timers = timer_table
-            settings:save('all')
+            save_timers()
         else
-            timers.update_timer(timer.text_object, timer.name, timer.time)
+            timers.update_timer(timer.text_object, timer.name, timer.time, settings.visible)
         end
     end
 end)
@@ -127,8 +145,7 @@ windower.register_event('addon command', function(cmd, ...)
             if (not args[3]) then args[3] = 1 end
             local timers_count = tonumber(args[3])
             for i = 1, timers_count do
-                new_time = new_time + (60 * i)
-                create_timer(name, new_time)
+            	create_timer(name, new_time + ((i-1) * 600))
             end
         elseif #args < 4 then
             error('Please specify name hours minutes seconds')
@@ -153,18 +170,20 @@ windower.register_event('addon command', function(cmd, ...)
             -- delete a timer
             name = args[1]
             for i, timer in pairs(timer_table) do
-                if timers.name == name then
+                if timer.name == name then
                     table.remove(timer_table, i)
                 end
                 log('Deleted timer ' .. name)
             end
+			save_timers()
         end
 
     elseif cmd == 'save' then
-        settings.timers = timer_table
-        settings:save('all')
+        save_timers()
     elseif cmd == 'list' then
         list_timers()
+	elseif cmd == 'show' then
+		toggle_timers()
     else
         -- //ctimers add NAME H M S
         -- //ctimers del NAME
