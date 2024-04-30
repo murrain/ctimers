@@ -121,6 +121,7 @@ load_timers()
 function list_timers()
     if not timer_table then return end
     for _, timer in pairs(timer_table) do
+		table.sort(timer.alarms,function(a,b) return a.time < b.time end)
 		for _, alarm in pairs(timer.alarms) do
 			local current_time = os.time()
 			local remaining_time = alarm.time - current_time
@@ -175,6 +176,7 @@ windower.register_event('addon command', function(cmd, ...)
             for i = 1, timers_count do
 				table.insert(create_timer_table,{time=new_time + ((i - 1) * 600)})
             end
+			table.sort(create_timer_table,function(a,b) return a.time < b.time end)
 			create_timer(name, create_timer_table)
         elseif #args < 4 then
             error('Please specify name hours minutes seconds')

@@ -47,9 +47,10 @@ function timers.move(o, x, y)
     if not o then return end
     o.x = x
     o.y = y
+    o.display_text:pos(x,y)
 end
 
-function timers.update_timer(o, name, time)
+function timers.update_timer(o, name, time, visible)
     if not o then return end
 
     local current_time = os.time()
@@ -63,6 +64,12 @@ function timers.update_timer(o, name, time)
                                           string.format("%dmin ", minutes) or "",
                                       string.format("%dsec", seconds))
 
-    o.name = name
-    o.time_string = time_string
+    o.display_text.name = name
+    o.display_text.time_string = time_string
+
+    if visible then
+        timers.show(o)
+    else
+        timers.hide(o)
+    end
 end
