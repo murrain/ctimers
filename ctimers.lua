@@ -27,7 +27,7 @@ defaults.sound = "long_pop.wav"
 defaults.visible = 1
 defaults.text = {}
 defaults.text.position = {x = 50, y = 300}
-defaults.text.font = {family = "Arial", size = 11, color = {}}
+defaults.text.font = {family = "Arial", size = 10, color = {}}
 defaults.text.font.color = {alpha = 255, red = 200, green = 200, blue = 200}
 defaults.text.bg = {alpha = 128, red = 30, green = 30, blue = 30}
 
@@ -91,7 +91,7 @@ function sort_timers()
 	table.sort(timer_table, function(a, b)
 		local _, time_a = next(a.alarms)
 		local _, time_b = next(b.alarms)
-		return time_a < time_b
+		return time_a.time < time_b.time
 	end)
 	for i,timer in ipairs(timer_table) do
         local y_offset = (defaults.text.font.size + 2) * i
