@@ -1,6 +1,6 @@
 _addon.name = 'ctimers'
 _addon.author = 'ainais'
-_addon.version = '0.0.2'
+_addon.version = '0.1.0'
 _addon.commands = {'ctimers', 'ct'}
 
 require('logger')
@@ -13,7 +13,7 @@ texts = require('texts')
 
 require('timers')
 --[[
-timer: {name,time,text_object}
+timer: {name,{alarms},text_object}
 --]]
 
 -- regex to match a valid date
@@ -64,7 +64,7 @@ function create_timer(name, alarms)
     table.insert(timer_table, {name = name, alarms = alarms, text_object = o})
     log('Added timer ' .. name)
     save_timers();
-	sort_timers();
+    sort_timers();
 end
 
 function load_timers()
@@ -72,10 +72,15 @@ function load_timers()
     for _, timer in pairs(settings.timers) do
         local o = timers.new(defaults.text)
         local y_offset = (defaults.text.font.size + 2) * #timer_table
-        timers.move(o, settings.text.position.x,settings.text.position.y + y_offset)
-        table.insert(timer_table,{name = timer.name, alarms = timer.alarms, text_object = o})
+        timers.move(o, settings.text.position.x,
+                    settings.text.position.y + y_offset)
+        table.insert(timer_table, {
+            name = timer.name,
+            alarms = timer.alarms,
+            text_object = o
+        })
     end
-	sort_timers()
+    sort_timers()
 end
 
 function save_timers()
@@ -88,30 +93,32 @@ function save_timers()
 end
 
 function sort_timers()
-	table.sort(timer_table, function(a, b)
-		local _, time_a = next(a.alarms)
-		local _, time_b = next(b.alarms)
-		return time_a.time < time_b.time
-	end)
-	for i,timer in ipairs(timer_table) do
+    table.sort(timer_table, function(a, b)
+        local _, time_a = next(a.alarms)
+        local _, time_b = next(b.alarms)
+        return time_a.time < time_b.time
+    end)
+    for i, timer in ipairs(timer_table) do
         local y_offset = (defaults.text.font.size + 2) * i
-        timers.move(timer.text_object, settings.text.position.x,settings.text.position.y + y_offset)
+        timers.move(timer.text_object, settings.text.position.x,
+                    settings.text.position.y + y_offset)
     end
 end
 
-function alert_timer(index)
-    local timer = timer_table[index]
+function alert_timer(i, j)
+    local timer = timer_table[i]
     windower.play_sound(windower.addon_path .. 'sounds/' .. settings.sound)
     log(timer.name .. " alarm")
-	table.remove(timer.alarms,1)
-	if(#timer.alarms < 1) then
-		timers.destroy(timer.text_object)
-		table.remove(timer_table, index)
-		for i,timer in ipairs(timer_table) do
-			local y_offset = (defaults.text.font.size + 2) * i
-			timers.move(timer.text_object, settings.text.position.x,settings.text.position.y + y_offset)
-		end
-	end
+    table.remove(timer.alarms, j)
+    if (#timer.alarms < 1) then
+        timers.destroy(timer.text_object)
+        table.remove(timer_table, i)
+        for k, t in ipairs(timer_table) do
+            local y_offset = (defaults.text.font.size + 2) * k
+            timers.move(t.text_object, settings.text.position.x,
+                        settings.text.position.y + y_offset)
+        end
+    end
 end
 
 function toggle_timers() settings.visible = not settings.visible end
@@ -121,21 +128,21 @@ load_timers()
 function list_timers()
     if not timer_table then return end
     for _, timer in pairs(timer_table) do
-		table.sort(timer.alarms,function(a,b) return a.time < b.time end)
-		for _, alarm in pairs(timer.alarms) do
-			local current_time = os.time()
-			local remaining_time = alarm.time - current_time
-			local hours = math.floor(remaining_time / 3600)
-			local minutes = math.floor((remaining_time % 3600) / 60)
-			local seconds = remaining_time % 60
-			local time_string = string.format("%s%s%s", hours > 0 and
-												string.format("%dhr ", hours) or
-												"", minutes > 0 and
-												string.format("%dmin ", minutes) or
-												"",
-											string.format("%dsec", seconds))
-			log(timer.name .. ' in ' .. time_string)
-		end
+        table.sort(timer.alarms, function(a, b) return a.time < b.time end)
+        for _, alarm in pairs(timer.alarms) do
+            local current_time = os.time()
+            local remaining_time = alarm.time - current_time
+            local hours = math.floor(remaining_time / 3600)
+            local minutes = math.floor((remaining_time % 3600) / 60)
+            local seconds = remaining_time % 60
+            local time_string = string.format("%s%s%s", hours > 0 and
+                                                  string.format("%dhr ", hours) or
+                                                  "", minutes > 0 and
+                                                  string.format("%dmin ",
+                                                                minutes) or "",
+                                              string.format("%dsec", seconds))
+            log(timer.name .. ' in ' .. time_string)
+        end
     end
 end
 
@@ -149,9 +156,9 @@ windower.register_event('prerender', function(new, old)
     last_update = current_time
 
     for i, timer in pairs(timer_table) do
-		local _,next_alarm = next(timer.alarms)
+        local j, next_alarm = next(timer.alarms)
         if (next_alarm.time <= current_time) then
-            alert_timer(i)
+            alert_timer(i, j)
             save_timers()
         else
             timers.update_timer(timer.text_object, timer.name, next_alarm.time,
@@ -172,12 +179,14 @@ windower.register_event('addon command', function(cmd, ...)
             local new_time = get_next_timestamp(args[2])
             if (not args[3]) then args[3] = 1 end
             local timers_count = tonumber(args[3])
-			local create_timer_table = {}
+            local create_timer_table = {}
             for i = 1, timers_count do
-				table.insert(create_timer_table,{time=new_time + ((i - 1) * 600)})
+                table.insert(create_timer_table,
+                             {time = new_time + ((i - 1) * 600)})
             end
-			table.sort(create_timer_table,function(a,b) return a.time < b.time end)
-			create_timer(name, create_timer_table)
+            table.sort(create_timer_table,
+                       function(a, b) return a.time < b.time end)
+            create_timer(name, create_timer_table)
         elseif #args < 4 then
             error('Please specify name hours minutes seconds')
         else
@@ -188,7 +197,9 @@ windower.register_event('addon command', function(cmd, ...)
             local seconds = args[4]
             local total_seconds = hours * 3600 + minutes * 60 + seconds
             local new_time = current_time + total_seconds
-            create_timer(name, T{new_time})
+			local create_timer_table = {}
+			table.insert(create_timer_table, {time = new_time})
+            create_timer(name, create_timer_table)
         end
 
     elseif cmd == 'del' then
@@ -202,10 +213,10 @@ windower.register_event('addon command', function(cmd, ...)
             name = args[1]
             for i, timer in pairs(timer_table) do
                 if timer.name == name then
-					timers.destroy(timer.text_object)
+                    timers.destroy(timer.text_object)
                     table.remove(timer_table, i)
-					log('Deleted timer ' .. name)
-					sort_timers()
+                    log('Deleted timer ' .. name)
+                    sort_timers()
                 end
             end
             save_timers()
