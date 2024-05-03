@@ -212,7 +212,7 @@ windower.register_event('addon command', function(cmd, ...)
             -- delete a timer
             name = args[1]
             for i, timer in pairs(timer_table) do
-                if timer.name == name then
+                if timer.name:lower() == name then
                     timers.destroy(timer.text_object)
                     table.remove(timer_table, i)
                     log('Deleted timer ' .. name)
