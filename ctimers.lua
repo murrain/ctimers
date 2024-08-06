@@ -177,8 +177,14 @@ windower.register_event('addon command', function(cmd, ...)
         elseif (string.match(args[2], time_pattern)) then
             local name = args[1]
             local new_time = get_next_timestamp(args[2])
-            if (not args[3]) then args[3] = 1 end
-            local timers_count = tonumber(args[3])
+	    local timers_count=1;
+	    local timers_delta=600;
+            if (not args[3]) then 
+	        timers_count = 1
+		timers_delta = 600
+	    elseif (args[3] == 'hnm' ) then
+		timers_count = 7
+	    end
             local create_timer_table = {}
             for i = 1, timers_count do
                 table.insert(create_timer_table,
