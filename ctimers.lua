@@ -180,11 +180,12 @@ windower.register_event('addon command', function(cmd, ...)
             local new_time = get_next_timestamp(args[2])
 	    local timers_count=1;
 	    local timers_delta=600;
-            if (not args[3]) then 
-	        timers_count = 1
-		timers_delta = 600
-	    elseif (args[3] == 'hnm' ) then
-		timers_count = 7
+	    local timers_list = T{}
+	    timers_list['hnm'] = {count = 7, delta=600}
+	    timers_list['wyrm'] = {count = 96 ,delta=1800}
+	    if (timers_list[args[3]] ~= nil ) then
+		timers_count = timers_list[args[3]].count
+		timers_delta = timers_list[args[3]].delta
 	    end
             local create_timer_table = {}
             for i = 1, timers_count do
