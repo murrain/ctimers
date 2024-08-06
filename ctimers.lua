@@ -141,7 +141,8 @@ function list_timers()
                                                   string.format("%dmin ",
                                                                 minutes) or "",
                                               string.format("%dsec", seconds))
-            log(timer.name .. ' in ' .. time_string)
+	    local hms = os.date("%H:%M:%S",alarm.time)
+            log(timer.name .. ' in ' .. time_string ..' ['.. hms ..']')
         end
     end
 end
