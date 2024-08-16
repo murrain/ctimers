@@ -172,17 +172,19 @@ windower.register_event('addon command', function(cmd, ...)
     cmd = cmd and cmd:lower() or 'help'
     local args = {...}
     if cmd == 'add' then
+        local timers_count=1;
+	    local timers_delta=600;
+	    local timers_list = T{}
+	    timers_list['hnm'] = {count = 7, delta=600}
+	    timers_list['wyrm'] = {count = 96 ,delta=1800}
+	    timers_list['tonberry'] = {count = 130, delta=26}
+
         if args[1] == 'help' then
             log('Adds a timer.')
             log('Usage: add format [help|<format>]')
         elseif (string.match(args[2], time_pattern)) then
             local name = args[1]
             local new_time = get_next_timestamp(args[2])
-	    local timers_count=1;
-	    local timers_delta=600;
-	    local timers_list = T{}
-	    timers_list['hnm'] = {count = 7, delta=600}
-	    timers_list['wyrm'] = {count = 96 ,delta=1800}
 	    if (timers_list[args[3]] ~= nil ) then
 		timers_count = timers_list[args[3]].count
 		timers_delta = timers_list[args[3]].delta
@@ -190,7 +192,7 @@ windower.register_event('addon command', function(cmd, ...)
             local create_timer_table = {}
             for i = 1, timers_count do
                 table.insert(create_timer_table,
-                             {time = new_time + ((i - 1) * 600)})
+                             {time = new_time + ((i - 1) * timers_delta)})
             end
             table.sort(create_timer_table,
                        function(a, b) return a.time < b.time end)
@@ -206,7 +208,14 @@ windower.register_event('addon command', function(cmd, ...)
             local total_seconds = hours * 3600 + minutes * 60 + seconds
             local new_time = current_time + total_seconds
 			local create_timer_table = {}
-			table.insert(create_timer_table, {time = new_time})
+            if (timers_list[args[5]] ~= nil ) then
+                timers_count = timers_list[args[5]].count
+                timers_delta = timers_list[args[5]].delta
+            end
+            for i = 1, timers_count do
+                table.insert(create_timer_table,
+                             {time = new_time + ((i - 1) * timers_delta)})
+            end
             create_timer(name, create_timer_table)
         end
 
